@@ -14,6 +14,7 @@ impl Config {
             return Err("Not engough arguments");
         }
 
+        // we get the source file and destination file/dir here
         let source = args[1].clone();
         let destination = args[2].clone();
 
@@ -25,6 +26,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let source = config.source;
     let destination = config.destination;
 
+    // driver function does the copying
     do_copy(&source, &destination)?;
 
     Ok(())
@@ -33,6 +35,13 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 pub fn do_copy(source: &str, destination: &str) -> std::io::Result<()> {
    println!("copying in progress: {} to {}", source, destination);
 
+   // Destination can be a file or a directory.
+   // If it is a directory
+   //   1: create the destination file with the same name as the source file
+   //   2: copy content from source to destination file
+   //   3: TODO in case of failure, undo the creation of destination file
+   // If it is a file
+   //   1: If file exists, just copy from source to destination otherwise panics 
    match fs::metadata(destination) {
        Ok(res) => {
            if res.is_dir() {
