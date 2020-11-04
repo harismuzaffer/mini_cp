@@ -1,6 +1,8 @@
 use std::error::Error;
 use std::path::Path;
 use std::fs;
+use std::io::ErrorKind;
+use std::ffi::OsStr;
 
 pub struct Config {
     source: String,
@@ -24,25 +26,56 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let source = config.source;
     let destination = config.destination;
 
-    println!("copying in process... {} to {}", source, destination);
-
     do_copy(&source, &destination)?;
 
     Ok(())
 }
 
-pub fn do_copy(source: &str, destination: &str) -> Result<(), Box<dyn Error>> {
+pub fn do_copy(source: &str, destination: &str) -> std::io::Result<()> {
    println!("copying in progress: {} to {}", source, destination);
 
    let new_destination: String;
 
-   // if fs::metadata(destination).unwrap().is_dir() {
-   //     new_destination = format!("{}/output", destination);
-   // }
+   match fs::metadata(destination) {
+       Ok(res) => {
+           if res.is_dir() {
+               let destination_file = create_destination_file(source, destination);
+               fs::copy(source, destination_file)?;
+           }
+           else if res.is_file() {
+               fs::copy(source, destination)?;
+           }
+       }
+       Err(error) => {
+           match error.kind() {
+               ErrorKind::NotFound => {
+                   panic!("Destination can either be an existing file or a directory");
+               },
+               (_) => {
+                   println!("Error not caught");
+                   todo!();
+               }
+           }
+       }
+   }
 
-   let bytes = fs::copy(source, destination)?;
-   println!("{} bytes copied!", bytes);
+   println!("copying finished");
    Ok(())
+}
+
+fn create_destination_file(source_file: &str, destination_dir: &str) -> String {
+    let source_file_name = Path::new(source_file).file_name();
+    match source_file_name {
+        Some(file_name) => {
+            let destination_file_name = format!("{}/{}", destination_dir, file_name.to_str().unwrap());
+            let destination_file = fs::File::create(&destination_file_name)
+                .expect("Problem while creating destination file");
+            return  destination_file_name;
+        },
+        None => {
+            panic!("{} not a valid file", source_file);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -51,7 +84,7 @@ mod test {
     use file_diff::diff;
 
     #[test]
-    fn copy_single_destination_file_exists() {
+    fn copy_single_when_destination_is_file() {
         let source = "/Users/mammoth/Documents/batch1.csv";
         let destination = "/Users/mammoth/Downloads/cargofile.csv";
         
@@ -65,16 +98,16 @@ mod test {
     }
 
     #[test]
-    fn copy_single_no_destination_file() {
+    fn copy_single_when_destination_is_dir() {
         let source = "/Users/mammoth/Documents/batch1.csv";
         let destination = "/Users/mammoth/Downloads/";
         
         do_copy(source, destination).expect("Unexpected error copying the file");
 
+        assert!(diff(source, &format!("{}/batch1.csv", destination)));
+
         if Path::new(&format!("{}/batch1.csv", destination)).exists() {
             fs::remove_file(&format!("{}/batch1.csv", destination)).expect("Unexpected error removing the file");
         } 
-
-        assert!(diff(source, &format!("{}/batch1.csv", destination)));
     }
 }
