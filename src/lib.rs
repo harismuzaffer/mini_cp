@@ -2,7 +2,6 @@ use std::error::Error;
 use std::path::Path;
 use std::fs;
 use std::io::ErrorKind;
-use std::ffi::OsStr;
 
 pub struct Config {
     source: String,
@@ -49,7 +48,7 @@ pub fn do_copy(source: &str, destination: &str) -> std::io::Result<()> {
                ErrorKind::NotFound => {
                    panic!("Destination can either be an existing file or a directory");
                },
-               (_) => {
+               _ => {
                    println!("Error not caught");
                    todo!();
                }
@@ -66,7 +65,7 @@ fn create_destination_file(source_file: &str, destination_dir: &str) -> String {
     match source_file_name {
         Some(file_name) => {
             let destination_file_name = format!("{}/{}", destination_dir, file_name.to_str().unwrap());
-            let destination_file = fs::File::create(&destination_file_name)
+            fs::File::create(&destination_file_name)
                 .expect("Problem while creating destination file");
             return  destination_file_name;
         },
