@@ -34,8 +34,6 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 pub fn do_copy(source: &str, destination: &str) -> std::io::Result<()> {
    println!("copying in progress: {} to {}", source, destination);
 
-   let new_destination: String;
-
    match fs::metadata(destination) {
        Ok(res) => {
            if res.is_dir() {
